@@ -29,4 +29,10 @@ public class PostController {
         postService.deleteImageFromS3(imageUrl);
         return ResponseEntity.ok("이미지가 성공적으로 삭제되었습니다.");
     }
+
+    @DeleteMapping("image/{postId}")
+    public ResponseEntity<String> deleteImage(@PathVariable Long postId) {
+        postService.deleteImageAndUpdatePost(postId);
+        return ResponseEntity.ok("이미지가 삭제되었습니다.");
+    }
 }

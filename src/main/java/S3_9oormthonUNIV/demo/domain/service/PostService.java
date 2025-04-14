@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -75,7 +76,7 @@ public class PostService {
         String originalFilename = image.getOriginalFilename(); //원본 파일 명
         String extention = originalFilename.substring(originalFilename.lastIndexOf(".")); //확장자 명
 
-        String s3FileName = UUID.randomUUID().toString().substring(0, 10) + originalFilename; //변경된 파일 명
+        String s3FileName = UUID.randomUUID().toString().substring(0, 10) + originalFilename; //UUID를 통해 중복없이 변경된 파일 명
 
         log.info("[S3 업로드 시작] 원본파일명: {}, 확장자: {}, 저장될 S3 파일명: {}", originalFilename, extention, s3FileName);
 
@@ -134,5 +135,23 @@ public class PostService {
                 .build();
 
         postRepository.save(post);
+    }
+
+    @Transactional
+    public void deleteImageAndUpdatePost(Long postId) {
+        // 1. 게시글 조회
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new S3Exception(ErrorCode.POST_NOT_FOUND));
+
+        // 2. 기존 이미지 주소 가져오기
+        String imageUrl = post.getImage();
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            // 3. S3에서 이미지 삭제
+            deleteImageFromS3(imageUrl);
+
+            // 4. DB에서 이미지 필드 초기화
+            post.setImage(null);
+            postRepository.save(post);
+        }
     }
 }
